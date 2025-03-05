@@ -83,8 +83,8 @@ resource "aws_security_group" "api_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.admin_ip}/32"]
-    description = "SSH from admin IP"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "SSH from any IP"
   }
 
   # Allow all outbound traffic
@@ -148,9 +148,4 @@ resource "aws_eip" "api_eip" {
   tags = {
     Name = "${var.project_name}-eip"
   }
-}
-
-# Output the public IP of the instance
-output "api_public_ip" {
-  value = aws_eip.api_eip.public_ip
 } 

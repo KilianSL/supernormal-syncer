@@ -1,1 +1,85 @@
- 
+# Credentials & Keys
+*.pem
+.env
+.env.*
+!.env.example
+credentials.json
+secrets.json
+*.key
+*.cert
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.pnpm-debug.log
+.npm/
+.yarn/
+.pnp.*
+
+# TypeScript
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE & Editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+*.swp
+*.swo
+.history/
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+.terragrunt-cache/
+.terraform.lock.hcl
+
+# Temp files
+.tmp/
+tmp/
+temp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+*.zip
+*.tar.gz
+*.tgz
+deploy.zip
+
+# Miscellaneous
+.cache/
+.eslintcache
+.stylelintcache

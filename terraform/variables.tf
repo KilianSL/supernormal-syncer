@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "The AWS region to deploy resources in"
   type        = string
-  default     = "eu-west-2"
+  default     = "eu-west-1"
 }
 
 variable "project_name" {
@@ -19,7 +19,7 @@ variable "instance_type" {
 variable "ami_id" {
   description = "The AMI ID for the EC2 instance"
   type        = string
-  default     = "ami-0e5f882be1900e43b" # Ubuntu 20.04 LTS for eu-west-2 (London)
+  default     = "ami-09cba89b0e91c8130" # Ubuntu 20.04 LTS for eu-west-1
 }
 
 variable "key_name" {
@@ -28,8 +28,8 @@ variable "key_name" {
 }
 
 variable "admin_ip" {
-  description = "The IP address allowed for SSH access"
+  description = "The IP address allowed for SSH access (not used when SSH is open to all)"
   type        = string
   sensitive   = true
-  # No default, must be provided
+  default     = "0.0.0.0"  # Default value, no longer required to be provided
 } 
