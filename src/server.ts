@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Application } from 'express';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -14,7 +14,7 @@ import routes from './routes';
 dotenv.config();
 
 // Create Express application
-const app = express();
+const app: Application = express();
 const port = process.env.PORT || 3000;
 
 // Apply global middleware
