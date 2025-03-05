@@ -19,7 +19,7 @@ CMD ["pnpm", "dev"]
 
 # Build stage
 FROM base AS build
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install
 COPY . .
 RUN pnpm build
 
@@ -32,7 +32,7 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/pnpm-lock.yaml ./
 
 # Install only production dependencies
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod 
 
 # Set environment variables
 ENV NODE_ENV=production
