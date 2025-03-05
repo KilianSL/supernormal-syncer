@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      target: production
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - API_KEY=${API_KEY}
+      - VIRTUAL_HOST=${DOMAIN_NAME}
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_HOST=${DOMAIN_NAME}
+      - LETSENCRYPT_EMAIL=${EMAIL_ADDRESS}
+    volumes:
+      - api_logs:/app/logs
+    expose:
+      - "3000"
+    networks:
+      - app_network
+    depends_on:
+      - nginx-proxy
+
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - nginx_certs:/etc/nginx/certs
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+      - nginx_logs:/var/log/nginx
+    networks:
+      - app_network
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - nginx_certs:/etc/nginx/certs
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+    depends_on:
+      - nginx-proxy
+    networks:
+      - app_network
+
+volumes:
+  api_logs:
+  nginx_certs:
+  nginx_vhost:
+  nginx_html:
+  nginx_logs:
+
+networks:
+  app_network:
+    driver: bridge 

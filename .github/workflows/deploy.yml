@@ -1,0 +1,128 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Setup PNPM
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+        run_install: false
+        
+    - name: Get PNPM store directory
+      id: pnpm-cache
+      run: |
+        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+        
+    - name: Setup PNPM cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+          
+    - name: Install dependencies
+      run: pnpm install
+      
+    - name: Build TypeScript
+      run: pnpm build
+      
+    - name: Run tests
+      run: pnpm test
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-west-2
+        
+    - name: Create SSH directory
+      run: mkdir -p ~/.ssh
+      
+    - name: Store SSH private key
+      run: echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+      
+    - name: Add host key
+      run: echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+      
+    - name: Deploy to EC2
+      env:
+        EC2_HOST: ${{ secrets.EC2_HOST }}
+        API_KEY: ${{ secrets.API_KEY }}
+        DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
+        EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+      run: |
+        # Create deployment package
+        mkdir -p deploy
+        cp -r dist package.json pnpm-lock.yaml Dockerfile docker-compose.prod.yml .env.example deploy/
+        cd deploy
+        cp ../.env.example .env
+        
+        # Update .env with secrets
+        sed -i "s/your-secure-api-key-here/$API_KEY/g" .env
+        echo "DOMAIN_NAME=$DOMAIN_NAME" >> .env
+        echo "EMAIL_ADDRESS=$EMAIL_ADDRESS" >> .env
+        
+        # Zip the package
+        zip -r ../deploy.zip .
+        cd ..
+        
+        # Transfer files
+        scp -o StrictHostKeyChecking=no deploy.zip ubuntu@${EC2_HOST}:/tmp/
+        
+        # Execute remote commands
+        ssh -o StrictHostKeyChecking=no ubuntu@${EC2_HOST} << 'EOFCMD'
+          # Create app directory if it doesn't exist
+          sudo mkdir -p /opt/api
+          sudo chown ubuntu:ubuntu /opt/api
+          
+          # Unzip and setup
+          unzip -o /tmp/deploy.zip -d /tmp/deploy
+          cp -r /tmp/deploy/* /opt/api/
+          cd /opt/api
+          
+          # Install Docker if not already installed
+          if ! command -v docker &> /dev/null; then
+            echo "Installing Docker..."
+            sudo apt-get update
+            sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+            sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+            sudo apt-get update
+            sudo apt-get install -y docker-ce
+            sudo usermod -aG docker ubuntu
+          fi
+          
+          # Install Docker Compose if not already installed
+          if ! command -v docker-compose &> /dev/null; then
+            echo "Installing Docker Compose..."
+            sudo curl -L "https://github.com/docker/compose/releases/download/v2.16.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          
+          # Stop existing containers if they exist
+          docker-compose -f docker-compose.prod.yml down || true
+          
+          # Start containers
+          docker-compose -f docker-compose.prod.yml up -d --build
+          
+          # Clean up
+          rm -rf /tmp/deploy
+          rm /tmp/deploy.zip
+        EOFCMD
